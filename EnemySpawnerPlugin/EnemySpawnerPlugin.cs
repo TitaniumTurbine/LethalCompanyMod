@@ -7,41 +7,63 @@ using Unity.Netcode;
 using UnityEngine.SceneManagement;
 using UnityEngine;
 using System.Collections.Generic;
+using Newtonsoft.Json;
+using System;
 
 namespace LethalCompanyMod.EnemySpawnerPlugin
 {
     [BepInPlugin("LethalCompanyMod.EnemySpawner", "EnemySpawner.Plugin", "0.1.0")]
     public class EnemySpawnerPlugin : BaseUnityPlugin
     {
-        private static ConfigEntry<int> outsideCount;
-        private static ConfigEntry<string> outsideName;
-        private static ConfigEntry<int> insideCount;
-        private static ConfigEntry<string> insideName;
+        private static int outsideMinCount;
+        private static int outsideMaxCount;
+        private static string[] outsideNames;
+        private static int insideMinCount;
+        private static int insideMaxCount;
+        private static string[] insideNames;
         private static bool insideSpawned = false;
 
         private void Awake()
         {
-            outsideCount = Config.Bind("Outside Enemies",      // The section under which the option is shown
-                                        "OutsideCount",  // The key of the configuration option in the configuration file
+            var configOutsideMinCount = Config.Bind("Outside Enemies",      // The section under which the option is shown
+                                        "OutsideMinCount",  // The key of the configuration option in the configuration file
                                         1, // The default value
-                                        "How many enemies to spawn outside when you land"); // Description of the option to show in the config file
+                                        "Minimum enemies to spawn outside when you land"); // Description of the option to show in the config file
 
-            outsideName = Config.Bind("Outside Enemies",      // The section under which the option is shown
-                                        "OutsideName",  // The key of the configuration option in the configuration file
-                                        "Flowerman", // The default value
-                                        "The ID of the enemy type to spawn"); // Description of the option to show in the config file
+            var configOutsideMaxCount = Config.Bind("Outside Enemies",      // The section under which the option is shown
+                                        "OutsideMaxCount",  // The key of the configuration option in the configuration file
+                                        1, // The default value
+                                        "Maximum enemies to spawn outside when you land"); // Description of the option to show in the config file
+
+            var configOutsideNames = Config.Bind("Outside Enemies",      // The section under which the option is shown
+                                        "OutsideNames",  // The key of the configuration option in the configuration file
+                                        "Centipede,SandSpider,HoarderBug,Flowerman,Crawler,Blob,DressGirl,Puffer,Nutcracker,RedLocustBees,Doublewing,DocileLocustBees,MouthDog,ForestGiant,SandWorm,BaboonHawk,SpringMan,Jester,LassoMan,MaskedPlayerEnemy", // The default value
+                                        "The IDs of the enemy types to spawn outside, separated by commas"); // Description of the option to show in the config file
 
             
 
-            insideCount = Config.Bind("Inside Enemies",      // The section under which the option is shown
-                                        "InsideCount",  // The key of the configuration option in the configuration file
+            var configInsideMinCount = Config.Bind("Inside Enemies",      // The section under which the option is shown
+                                        "InsideMinCount",  // The key of the configuration option in the configuration file
                                         0, // The default value
-                                        "How many enemies to spawn inside when you land"); // Description of the option to show in the config file
+                                        "Minimum enemies to spawn inside when you land"); // Description of the option to show in the config file
 
-            insideName = Config.Bind("Inside Enemies",      // The section under which the option is shown
-                                        "InsideName",  // The key of the configuration option in the configuration file
-                                        "Flowerman", // The default value
-                                        "The ID of the enemy type to spawn"); // Description of the option to show in the config file
+            var configInsideMaxCount = Config.Bind("Inside Enemies",      // The section under which the option is shown
+                                        "InsideMaxCount",  // The key of the configuration option in the configuration file
+                                        0, // The default value
+                                        "Maximum enemies to spawn inside when you land"); // Description of the option to show in the config file
+
+            var configInsideNames = Config.Bind("Inside Enemies",      // The section under which the option is shown
+                                        "InsideNames",  // The key of the configuration option in the configuration file
+                                        "Centipede,SandSpider,HoarderBug,Flowerman,Crawler,Blob,DressGirl,Puffer,Nutcracker,RedLocustBees,Doublewing,DocileLocustBees,MouthDog,ForestGiant,SandWorm,BaboonHawk,SpringMan,Jester,LassoMan,MaskedPlayerEnemy", // The default value
+                                        "The IDs of the enemy types to spawn inside, separated by commas"); // Description of the option to show in the config file
+
+            outsideMinCount = configOutsideMinCount.Value;
+            outsideMaxCount = configOutsideMaxCount.Value;
+            insideMinCount = configInsideMinCount.Value;
+            insideMaxCount = configInsideMaxCount.Value;
+
+            outsideNames = configOutsideNames.Value.Split(",");
+            insideNames = configInsideNames.Value.Split(",");
 
             Harmony.CreateAndPatchAll(typeof(EnemySpawnerPlugin));
         }
@@ -82,11 +104,11 @@ namespace LethalCompanyMod.EnemySpawnerPlugin
             {
                 var rm = GetRoundManager();
                 var spawns = GameObject.FindGameObjectsWithTag("EnemySpawn");
+                var random = new System.Random();
 
-                for (int i = 0; i < insideCount.Value; i++)
+                for (int i = 0; i < random.Next(insideMinCount, insideMaxCount); i++)
                 {
-                    Debug.Log("index: " + (i % spawns.Length));
-                    SpawnEnemyFromVent(spawns[i % spawns.Length].GetComponent<EnemyVent>(), rm, insideName.Value);
+                    SpawnEnemyFromVent(spawns[i % spawns.Length].GetComponent<EnemyVent>(), rm, insideNames[random.Next(insideNames.Length)]);
                 }
 
                 insideSpawned = true;
@@ -99,15 +121,16 @@ namespace LethalCompanyMod.EnemySpawnerPlugin
         static void SpawnOutsideEnemies()
         {
             var rm = GetRoundManager();
+            var random = new System.Random();
 
             foreach (var enemy in GetEnemies())
             {
                 Debug.Log(enemy.enemyType.name);
             }
 
-            for (int i = 0; i < outsideCount.Value; i++)
+            for (int i = 0; i < random.Next(outsideMinCount, outsideMaxCount); i++)
             {
-                SpawnEnemyOutside(rm, outsideName.Value);
+                SpawnEnemyOutside(rm, outsideNames[random.Next(outsideNames.Length)]);
             }
         }
 
