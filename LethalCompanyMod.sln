@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34322.80
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YouSmellPlugin", "LethalCompanyMod\YouSmellPlugin.csproj", "{64C81E6D-8CA8-4270-9B79-292B38C6365A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YouSmellPlugin", "YouSmellPlugin\YouSmellPlugin.csproj", "{64C81E6D-8CA8-4270-9B79-292B38C6365A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnemySpawnerPlugin", "EnemySpawnerPlugin\EnemySpawnerPlugin.csproj", "{AB30C7BA-2D71-480E-9520-8F92F55BF958}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AudioReplacerPlugin", "AudioReplacerPlugin\AudioReplacerPlugin.csproj", "{590BE42C-1A15-4CC3-B063-E0604B953F84}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{64C81E6D-8CA8-4270-9B79-292B38C6365A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{64C81E6D-8CA8-4270-9B79-292B38C6365A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{64C81E6D-8CA8-4270-9B79-292B38C6365A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AB30C7BA-2D71-480E-9520-8F92F55BF958}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AB30C7BA-2D71-480E-9520-8F92F55BF958}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AB30C7BA-2D71-480E-9520-8F92F55BF958}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AB30C7BA-2D71-480E-9520-8F92F55BF958}.Release|Any CPU.Build.0 = Release|Any CPU
+		{590BE42C-1A15-4CC3-B063-E0604B953F84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{590BE42C-1A15-4CC3-B063-E0604B953F84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{590BE42C-1A15-4CC3-B063-E0604B953F84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{590BE42C-1A15-4CC3-B063-E0604B953F84}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

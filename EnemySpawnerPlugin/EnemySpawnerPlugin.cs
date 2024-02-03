@@ -6,15 +6,18 @@ using System.Linq;
 using Unity.Netcode;
 using UnityEngine.SceneManagement;
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace LethalCompanyMod.EnemySpawnerPlugin
 {
+    [BepInPlugin("LethalCompanyMod.EnemySpawner", "EnemySpawner.Plugin", "0.1.0")]
     public class EnemySpawnerPlugin : BaseUnityPlugin
     {
         private static ConfigEntry<int> outsideCount;
         private static ConfigEntry<string> outsideName;
         private static ConfigEntry<int> insideCount;
         private static ConfigEntry<string> insideName;
+        private static bool insideSpawned = false;
 
         private void Awake()
         {
@@ -27,6 +30,8 @@ namespace LethalCompanyMod.EnemySpawnerPlugin
                                         "OutsideName",  // The key of the configuration option in the configuration file
                                         "Flowerman", // The default value
                                         "The ID of the enemy type to spawn"); // Description of the option to show in the config file
+
+            
 
             insideCount = Config.Bind("Inside Enemies",      // The section under which the option is shown
                                         "InsideCount",  // The key of the configuration option in the configuration file
@@ -41,9 +46,7 @@ namespace LethalCompanyMod.EnemySpawnerPlugin
             Harmony.CreateAndPatchAll(typeof(EnemySpawnerPlugin));
         }
 
-        [HarmonyPatch(typeof(DungeonGenerator), "Generate")]
-        [HarmonyPostfix]
-        static void SpawnEnemies()
+        private static RoundManager GetRoundManager()
         {
             var gameObjects = SceneManager.GetActiveScene().GetRootGameObjects();
             RoundManager rm = null;
@@ -54,26 +57,57 @@ namespace LethalCompanyMod.EnemySpawnerPlugin
                     rm = gameObject.GetComponentInChildren<RoundManager>();
                 }
             }
+            return rm;
+        }
 
-            var names = rm.currentLevel.Enemies.Select(x => x.enemyType.name);
-            foreach (var name in names)
+        private static List<SpawnableEnemyWithRarity> GetEnemies()
+        {
+            var gameObjects = SceneManager.GetActiveScene().GetRootGameObjects();
+            List<SpawnableEnemyWithRarity> enemies = null;
+            foreach (var gameObject in gameObjects)
             {
-                Debug.Log(name);
+                if (gameObject.name == "Environment")
+                {
+                    enemies = gameObject.GetComponentInChildren<Terminal>().moonsCatalogueList.SelectMany(x => x.Enemies.Concat(x.DaytimeEnemies).Concat(x.OutsideEnemies)).GroupBy(x => x.enemyType.name, (k, v) => v.First()).ToList();
+                }
+            }
+            return enemies;
+        }
+
+        [HarmonyPatch(typeof(EnemyVent), "Start")]
+        [HarmonyPostfix]
+        static void SpawnInsideEnemies()
+        {
+            if (!insideSpawned)
+            {
+                var rm = GetRoundManager();
+                var spawns = GameObject.FindGameObjectsWithTag("EnemySpawn");
+
+                for (int i = 0; i < insideCount.Value; i++)
+                {
+                    Debug.Log("index: " + (i % spawns.Length));
+                    SpawnEnemyFromVent(spawns[i % spawns.Length].GetComponent<EnemyVent>(), rm, insideName.Value);
+                }
+
+                insideSpawned = true;
+            }
+            
+        }
+
+        [HarmonyPatch(typeof(DungeonGenerator), "Generate")]
+        [HarmonyPostfix]
+        static void SpawnOutsideEnemies()
+        {
+            var rm = GetRoundManager();
+
+            foreach (var enemy in GetEnemies())
+            {
+                Debug.Log(enemy.enemyType.name);
             }
 
             for (int i = 0; i < outsideCount.Value; i++)
             {
-                //Flowerman
                 SpawnEnemyOutside(rm, outsideName.Value);
-            }
-
-            for (int i = 0; i < insideCount.Value; i++)
-            {
-                var spawns = rm.allEnemyVents;
-                Debug.LogError(spawns.Length);
-                var altSpawns = GameObject.FindGameObjectsWithTag("EnemySpawn");
-                Debug.LogError(altSpawns.Length);
-                SpawnEnemyFromVent(spawns[i / spawns.Length].GetComponent<EnemyVent>(), rm, insideName.Value);
             }
         }
 
@@ -82,7 +116,7 @@ namespace LethalCompanyMod.EnemySpawnerPlugin
             Vector3 position = vent.floorNode.position;
             float y = vent.floorNode.eulerAngles.y;
 
-            var enemyType = rm.currentLevel.Enemies.Find(x => x.enemyType.name == enemyName).enemyType;
+            var enemyType = GetEnemies().Find(x => x.enemyType.name == enemyName).enemyType;
             enemyType.isOutsideEnemy = false;
 
             rm.SpawnEnemyGameObject(position, y, vent.enemyTypeIndex, enemyType);
@@ -121,8 +155,7 @@ namespace LethalCompanyMod.EnemySpawnerPlugin
                 }
             }
 
-
-            var enemyType = rm.currentLevel.Enemies.Find(x => x.enemyType.name == enemyName).enemyType;
+            var enemyType = GetEnemies().Find(x => x.enemyType.name == enemyName).enemyType;
             enemyType.isOutsideEnemy = true;
             GameObject enemy = Instantiate(enemyType.enemyPrefab, position, Quaternion.Euler(Vector3.zero));
             enemy.gameObject.GetComponentInChildren<NetworkObject>().Spawn(true);
@@ -130,8 +163,6 @@ namespace LethalCompanyMod.EnemySpawnerPlugin
             if (enemy != null)
             {
                 var ai = enemy.GetComponent<EnemyAI>();
-                Debug.LogError(ai.enemyType.isOutsideEnemy);
-                Debug.LogError(ai.allAINodes.Length);
                 rm.SpawnedEnemies.Add(ai);
                 enemy.GetComponent<EnemyAI>().enemyType.numberSpawned++;
             }
