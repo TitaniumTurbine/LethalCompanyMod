@@ -10,17 +10,19 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using System;
 
-namespace LethalCompanyMod.EnemySpawnerPlugin
+namespace EnemySpawnerPlugin
 {
-    [BepInPlugin("LethalCompanyMod.EnemySpawner", "EnemySpawner.Plugin", "0.1.0")]
+    [BepInPlugin("TitaniumTurbine.EnemySpawner", "EnemySpawner.Plugin", "1.0.0")]
     public class EnemySpawnerPlugin : BaseUnityPlugin
     {
         private static int outsideMinCount;
         private static int outsideMaxCount;
         private static string[] outsideNames;
+        private static float outsideSpawnChance;
         private static int insideMinCount;
         private static int insideMaxCount;
         private static string[] insideNames;
+        private static float insideSpawnChance;
         private static bool insideSpawned = false;
 
         private void Awake()
@@ -40,7 +42,11 @@ namespace LethalCompanyMod.EnemySpawnerPlugin
                                         "Centipede,SandSpider,HoarderBug,Flowerman,Crawler,Blob,DressGirl,Puffer,Nutcracker,RedLocustBees,Doublewing,DocileLocustBees,MouthDog,ForestGiant,SandWorm,BaboonHawk,SpringMan,Jester,LassoMan,MaskedPlayerEnemy", // The default value
                                         "The IDs of the enemy types to spawn outside, separated by commas"); // Description of the option to show in the config file
 
-            
+            var configOutsideSpawnChance = Config.Bind("Outside Enemies",      // The section under which the option is shown
+                                        "OutsideSpawnChance",  // The key of the configuration option in the configuration file
+                                        1.0f, // The default value
+                                        "Chance of spawning enemies outside when you land"); // Description of the option to show in the config file
+
 
             var configInsideMinCount = Config.Bind("Inside Enemies",      // The section under which the option is shown
                                         "InsideMinCount",  // The key of the configuration option in the configuration file
@@ -57,10 +63,17 @@ namespace LethalCompanyMod.EnemySpawnerPlugin
                                         "Centipede,SandSpider,HoarderBug,Flowerman,Crawler,Blob,DressGirl,Puffer,Nutcracker,RedLocustBees,Doublewing,DocileLocustBees,MouthDog,ForestGiant,SandWorm,BaboonHawk,SpringMan,Jester,LassoMan,MaskedPlayerEnemy", // The default value
                                         "The IDs of the enemy types to spawn inside, separated by commas"); // Description of the option to show in the config file
 
+            var configInsideSpawnChance = Config.Bind("Inside Enemies",      // The section under which the option is shown
+                                        "InsideSpawnChance",  // The key of the configuration option in the configuration file
+                                        0.0f, // The default value
+                                        "Chance of spawning enemies inside when you land"); // Description of the option to show in the config file
+
             outsideMinCount = configOutsideMinCount.Value;
             outsideMaxCount = configOutsideMaxCount.Value;
+            outsideSpawnChance = configOutsideSpawnChance.Value;
             insideMinCount = configInsideMinCount.Value;
             insideMaxCount = configInsideMaxCount.Value;
+            insideSpawnChance = configInsideSpawnChance.Value;
 
             outsideNames = configOutsideNames.Value.Split(",");
             insideNames = configInsideNames.Value.Split(",");
@@ -100,11 +113,11 @@ namespace LethalCompanyMod.EnemySpawnerPlugin
         [HarmonyPostfix]
         static void SpawnInsideEnemies()
         {
-            if (!insideSpawned)
+            var random = new System.Random();
+            if (!insideSpawned && random.NextDouble() < insideSpawnChance)
             {
                 var rm = GetRoundManager();
                 var spawns = GameObject.FindGameObjectsWithTag("EnemySpawn");
-                var random = new System.Random();
 
                 for (int i = 0; i < random.Next(insideMinCount, insideMaxCount); i++)
                 {
@@ -120,17 +133,20 @@ namespace LethalCompanyMod.EnemySpawnerPlugin
         [HarmonyPostfix]
         static void SpawnOutsideEnemies()
         {
-            var rm = GetRoundManager();
             var random = new System.Random();
-
-            foreach (var enemy in GetEnemies())
+            if(random.NextDouble() < outsideSpawnChance)
             {
-                Debug.Log(enemy.enemyType.name);
-            }
+                var rm = GetRoundManager();
 
-            for (int i = 0; i < random.Next(outsideMinCount, outsideMaxCount); i++)
-            {
-                SpawnEnemyOutside(rm, outsideNames[random.Next(outsideNames.Length)]);
+                foreach (var enemy in GetEnemies())
+                {
+                    Debug.Log(enemy.enemyType.name);
+                }
+
+                for (int i = 0; i < random.Next(outsideMinCount, outsideMaxCount); i++)
+                {
+                    SpawnEnemyOutside(rm, outsideNames[random.Next(outsideNames.Length)]);
+                }
             }
         }
 

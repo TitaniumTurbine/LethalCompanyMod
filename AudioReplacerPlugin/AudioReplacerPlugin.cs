@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace AudioReplacerPlugin
 {
-    [BepInPlugin("LethalCompanyMod.AudioReplacer", "AudioReplacer.Plugin", "0.1.0")]
+    [BepInPlugin("TitaniumTurbine.AudioReplacer", "AudioReplacer.Plugin", "0.1.0")]
     public class AudioReplacerPlugin : BaseUnityPlugin
     {
         private void Awake()

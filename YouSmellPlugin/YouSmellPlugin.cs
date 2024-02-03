@@ -2,9 +2,9 @@
 using HarmonyLib;
 using UnityEngine.SceneManagement;
 
-namespace LethalCompanyMod.YouSmellPlugin
+namespace YouSmellPlugin
 {
-    [BepInPlugin("LethalCompanyMod.YouSmell", "YouSmell.Plugin", "0.1.0")]
+    [BepInPlugin("TitaniumTurbine.YouSmell", "YouSmell.Plugin", "0.1.0")]
     public class YouSmellPlugin : BaseUnityPlugin
     {
         
