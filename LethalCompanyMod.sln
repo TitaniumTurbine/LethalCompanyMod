@@ -5,9 +5,11 @@ VisualStudioVersion = 17.8.34322.80
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YouSmellPlugin", "YouSmellPlugin\YouSmellPlugin.csproj", "{64C81E6D-8CA8-4270-9B79-292B38C6365A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnemySpawnerPlugin", "EnemySpawnerPlugin\EnemySpawnerPlugin.csproj", "{AB30C7BA-2D71-480E-9520-8F92F55BF958}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EnemySpawnerPlugin", "EnemySpawnerPlugin\EnemySpawnerPlugin.csproj", "{AB30C7BA-2D71-480E-9520-8F92F55BF958}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AudioReplacerPlugin", "AudioReplacerPlugin\AudioReplacerPlugin.csproj", "{590BE42C-1A15-4CC3-B063-E0604B953F84}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AudioReplacerPlugin", "AudioReplacerPlugin\AudioReplacerPlugin.csproj", "{590BE42C-1A15-4CC3-B063-E0604B953F84}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenDoorsInSpacePlugin", "OpenDoorsInSpacePlugin\OpenDoorsInSpacePlugin.csproj", "{90449088-A55B-4967-975D-AB4537C9AB6C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{590BE42C-1A15-4CC3-B063-E0604B953F84}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{590BE42C-1A15-4CC3-B063-E0604B953F84}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{590BE42C-1A15-4CC3-B063-E0604B953F84}.Release|Any CPU.Build.0 = Release|Any CPU
+		{90449088-A55B-4967-975D-AB4537C9AB6C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{90449088-A55B-4967-975D-AB4537C9AB6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{90449088-A55B-4967-975D-AB4537C9AB6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{90449088-A55B-4967-975D-AB4537C9AB6C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
