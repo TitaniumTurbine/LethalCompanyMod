@@ -1,17 +1,28 @@
 ﻿using HarmonyLib;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using Unity.Netcode;
 using UnityEngine;
 
 namespace OpenDoorsInSpacePlugin
 {
-    internal class EjectPatcher : NetworkBehaviour
+    internal class EjectPatcher
     {
+        public static Harmony Harmony { get; set; } = new Harmony("EjectPatcher");
 
-        [HarmonyTranspiler]
-        [HarmonyPatch(typeof(StartOfRound), "playersFiredGameOver", MethodType.Enumerator)]
-        static IEnumerable TranspileMoveNext(IEnumerable e)
+        [HarmonyPatch(typeof(MonoBehaviour), "StartCoroutine", typeof(IEnumerator))]
+        [HarmonyPrefix]
+        static bool StartCoroutine(ref MonoBehaviour __instance)
+        {
+            Harmony.UnpatchSelf();
+            __instance.StartCoroutine(Eject());
+
+            return false;
+        }
+
+        private static IEnumerator Eject()
         {
             var s = StartOfRound.Instance;
 

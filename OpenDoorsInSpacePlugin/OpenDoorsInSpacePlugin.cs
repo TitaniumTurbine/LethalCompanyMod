@@ -26,13 +26,11 @@ namespace OpenDoorsInSpacePlugin
             {
                 var s = StartOfRound.Instance;
                 int[] endGameStats = new int[4] { s.gameStats.daysSpent, s.gameStats.scrapValueCollected, s.gameStats.deaths, s.gameStats.allStepsTaken };
-                var h = Harmony.CreateAndPatchAll(typeof(EjectPatcher));
+                EjectPatcher.Harmony.PatchAll(typeof(EjectPatcher));
                 s.ManuallyEjectPlayersServerRpc();
-                h.UnpatchSelf();
             }
             
             return true;
         }
-
     }
 }
