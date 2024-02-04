@@ -12,8 +12,16 @@ namespace OpenDoorsInSpacePlugin
     [BepInPlugin("TitaniumTurbine.OpenDoorsInSpace", "OpenDoorsInSpace.Plugin", "1.0.0")]
     public class OpenDoorsInSpacePlugin : BaseUnityPlugin
     {
+        public static bool EndGame = false;
+
         private void Awake()
         {
+            var configEndGame = Config.Bind("General",      // The section under which the option is shown
+                                        "EndGameOnEject",  // The key of the configuration option in the configuration file
+                                        false, // The default value
+                                        "Whether to end the game when you open the doors, the same as when you get fired"); // Description of the option to show in the config file
+
+            EndGame = configEndGame.Value;
             Harmony.CreateAndPatchAll(typeof(OpenDoorsInSpacePlugin));
         }
 
@@ -26,7 +34,8 @@ namespace OpenDoorsInSpacePlugin
             {
                 var s = StartOfRound.Instance;
                 int[] endGameStats = new int[4] { s.gameStats.daysSpent, s.gameStats.scrapValueCollected, s.gameStats.deaths, s.gameStats.allStepsTaken };
-                EjectPatcher.Harmony.PatchAll(typeof(EjectPatcher));
+                EjectPatcher.harmony.PatchAll(typeof(EjectPatcher));
+                if(!EndGame) FirstDayPatcher.harmony.PatchAll(typeof(FirstDayPatcher));
                 s.ManuallyEjectPlayersServerRpc();
             }
             

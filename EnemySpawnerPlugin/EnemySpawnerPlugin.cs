@@ -1,5 +1,4 @@
 ﻿using BepInEx;
-using BepInEx.Configuration;
 using DunGen;
 using HarmonyLib;
 using System.Linq;
@@ -7,8 +6,6 @@ using Unity.Netcode;
 using UnityEngine.SceneManagement;
 using UnityEngine;
 using System.Collections.Generic;
-using Newtonsoft.Json;
-using System;
 
 namespace EnemySpawnerPlugin
 {

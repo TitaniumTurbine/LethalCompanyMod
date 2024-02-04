@@ -10,13 +10,13 @@ namespace OpenDoorsInSpacePlugin
 {
     internal class EjectPatcher
     {
-        public static Harmony Harmony { get; set; } = new Harmony("EjectPatcher");
+        public static Harmony harmony = new Harmony("EjectPatcher");
 
         [HarmonyPatch(typeof(MonoBehaviour), "StartCoroutine", typeof(IEnumerator))]
         [HarmonyPrefix]
         static bool StartCoroutine(ref MonoBehaviour __instance)
         {
-            Harmony.UnpatchSelf();
+            harmony.UnpatchSelf();
             __instance.StartCoroutine(Eject());
 
             return false;
@@ -25,6 +25,7 @@ namespace OpenDoorsInSpacePlugin
         private static IEnumerator Eject()
         {
             var s = StartOfRound.Instance;
+            var endGame = OpenDoorsInSpacePlugin.EndGame;
 
             s.shipDoorsAnimator.SetBool("OpenInOrbit", true);
             s.shipDoorAudioSource.PlayOneShot(s.airPressureSFX);
@@ -57,7 +58,12 @@ namespace OpenDoorsInSpacePlugin
             HUDManager.Instance.UIAudio.PlayOneShot(s.suckedIntoSpaceSFX);
             yield return new WaitForSeconds(6f);
             SoundManager.Instance.SetDiageticMixerSnapshot(3, 2f);
-            HUDManager.Instance.ShowPlayersFiredScreen(show: true);
+
+            if (endGame)
+            {
+                HUDManager.Instance.ShowPlayersFiredScreen(show: true);
+            }
+
             yield return new WaitForSeconds(2f);
             s.starSphereObject.SetActive(value: false);
             s.shipDoorAudioSource.Stop();
@@ -65,12 +71,26 @@ namespace OpenDoorsInSpacePlugin
             s.suckingFurnitureOutOfShip = false;
             if (s.IsServer)
             {
-                GameNetworkManager.Instance.ResetSavedGameValues();
+                if (endGame)
+                {
+                    GameNetworkManager.Instance.ResetSavedGameValues();
+
+                    Debug.Log("Calling reset ship!");
+                    s.ResetShip();
+                }
+                else
+                {
+                    var resetFurniture = s.GetType().GetMethod("ResetShipFurniture", BindingFlags.NonPublic
+                | BindingFlags.Instance);
+                    resetFurniture.Invoke(s, new object[] {false, false});
+                }
             }
 
-            Debug.Log("Calling reset ship!");
-            s.ResetShip();
-            UnityEngine.Object.FindObjectOfType<Terminal>().SetItemSales();
+            if (endGame)
+            {
+                UnityEngine.Object.FindObjectOfType<Terminal>().SetItemSales();
+            }
+            
             yield return new WaitForSeconds(6f);
             s.shipAnimatorObject.gameObject.GetComponent<Animator>().SetBool("AlarmRinging", false);
             GameNetworkManager.Instance.localPlayerController.TeleportPlayer(s.playerSpawnPositions[GameNetworkManager.Instance.localPlayerController.playerClientId].position);
@@ -78,8 +98,8 @@ namespace OpenDoorsInSpacePlugin
             s.currentPlanetPrefab.transform.position = s.planetContainer.transform.position;
             s.suckingPlayersOutOfShip = false;
 
-            var prop = s.GetType().GetField("choseRandomFlyDirForPlayer", System.Reflection.BindingFlags.NonPublic
-                | System.Reflection.BindingFlags.Instance);
+            var prop = s.GetType().GetField("choseRandomFlyDirForPlayer", BindingFlags.NonPublic
+                | BindingFlags.Instance);
             prop.SetValue(s, false);
 
             //s.choseRandomFlyDirForPlayer = false;
@@ -88,14 +108,18 @@ namespace OpenDoorsInSpacePlugin
             yield return new WaitForSeconds(2f);
             if (s.IsServer)
             {
-                var prop2 = s.GetType().GetField("playersRevived", System.Reflection.BindingFlags.NonPublic
-                | System.Reflection.BindingFlags.Instance);
+                var prop2 = s.GetType().GetField("playersRevived", BindingFlags.NonPublic
+                | BindingFlags.Instance);
                 prop2.SetValue(s, (int)prop2.GetValue(s) + 1);
 
                 //s.playersRevived++;
                 yield return new WaitUntil(() => (int)prop2.GetValue(s) >= GameNetworkManager.Instance.connectedPlayers);
                 prop2.SetValue(s, 0);
+
+                //var oldBool = s.isChallengeFile;
+                //s.isChallengeFile = true;
                 s.EndPlayersFiredSequenceClientRpc();
+                //s.isChallengeFile = oldBool;
             }
             else
             {
