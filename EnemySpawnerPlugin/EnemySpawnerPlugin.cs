@@ -78,20 +78,6 @@ namespace EnemySpawnerPlugin
             Harmony.CreateAndPatchAll(typeof(EnemySpawnerPlugin));
         }
 
-        private static RoundManager GetRoundManager()
-        {
-            var gameObjects = SceneManager.GetActiveScene().GetRootGameObjects();
-            RoundManager rm = null;
-            foreach (var gameObject in gameObjects)
-            {
-                if (gameObject.name == "Systems")
-                {
-                    rm = gameObject.GetComponentInChildren<RoundManager>();
-                }
-            }
-            return rm;
-        }
-
         private static List<SpawnableEnemyWithRarity> GetEnemies()
         {
             var gameObjects = SceneManager.GetActiveScene().GetRootGameObjects();
@@ -103,6 +89,8 @@ namespace EnemySpawnerPlugin
                     enemies = gameObject.GetComponentInChildren<Terminal>().moonsCatalogueList.SelectMany(x => x.Enemies.Concat(x.DaytimeEnemies).Concat(x.OutsideEnemies)).GroupBy(x => x.enemyType.name, (k, v) => v.First()).ToList();
                 }
             }
+
+            Debug.Log(enemies.Count);
             return enemies;
         }
 
@@ -113,7 +101,7 @@ namespace EnemySpawnerPlugin
             var random = new System.Random();
             if (!insideSpawned && random.NextDouble() < insideSpawnChance)
             {
-                var rm = GetRoundManager();
+                var rm = RoundManager.Instance;
                 var spawns = GameObject.FindGameObjectsWithTag("EnemySpawn");
 
                 for (int i = 0; i < random.Next(insideMinCount, insideMaxCount); i++)
@@ -133,7 +121,7 @@ namespace EnemySpawnerPlugin
             var random = new System.Random();
             if(random.NextDouble() < outsideSpawnChance)
             {
-                var rm = GetRoundManager();
+                var rm = RoundManager.Instance;
 
                 foreach (var enemy in GetEnemies())
                 {
@@ -156,10 +144,6 @@ namespace EnemySpawnerPlugin
             enemyType.isOutsideEnemy = false;
 
             rm.SpawnEnemyGameObject(position, y, vent.enemyTypeIndex, enemyType);
-
-            Debug.Log("Spawned enemy from vent");
-            vent.OpenVentClientRpc();
-            vent.occupied = false;
         }
 
         private static void SpawnEnemyOutside(RoundManager rm, string enemyName)
@@ -168,40 +152,10 @@ namespace EnemySpawnerPlugin
             Vector3 position = spawnPoints[rm.AnomalyRandom.Next(0, spawnPoints.Length)].transform.position;
             position = rm.GetRandomNavMeshPositionInRadius(position, 4f);
             Debug.Log($"Anomaly random 4: {position.x}, {position.y}, {position.z}");
-            int num3 = 0;
-            bool flag = false;
-            for (int j = 0; j < spawnPoints.Length - 1; j++)
-            {
-                for (int k = 0; k < rm.spawnDenialPoints.Length; k++)
-                {
-                    flag = true;
-                    if (Vector3.Distance(position, rm.spawnDenialPoints[k].transform.position) < 16f)
-                    {
-                        num3 = (num3 + 1) % spawnPoints.Length;
-                        position = spawnPoints[num3].transform.position;
-                        position = rm.GetRandomNavMeshPositionInRadius(position, 4f);
-                        flag = false;
-                        break;
-                    }
-                }
-
-                if (flag)
-                {
-                    break;
-                }
-            }
 
             var enemyType = GetEnemies().Find(x => x.enemyType.name == enemyName).enemyType;
             enemyType.isOutsideEnemy = true;
-            GameObject enemy = Instantiate(enemyType.enemyPrefab, position, Quaternion.Euler(Vector3.zero));
-            enemy.gameObject.GetComponentInChildren<NetworkObject>().Spawn(true);
-
-            if (enemy != null)
-            {
-                var ai = enemy.GetComponent<EnemyAI>();
-                rm.SpawnedEnemies.Add(ai);
-                enemy.GetComponent<EnemyAI>().enemyType.numberSpawned++;
-            }
+            rm.SpawnEnemyGameObject(position, 0, 0, enemyType);
         }
     }
 }
