@@ -1,10 +1,6 @@
 ﻿using BepInEx;
-using GameNetcodeStuff;
 using HarmonyLib;
-using System.Collections;
 using System.Linq;
-using Unity.Netcode;
-using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace OpenDoorsInSpacePlugin
@@ -30,13 +26,26 @@ namespace OpenDoorsInSpacePlugin
         static bool SetDoorsClosed (bool closed)
         {
             var door = SceneManager.GetActiveScene().GetRootGameObjects().ToList().Find(x => x.name == "Environment").GetComponentInChildren<HangarShipDoor>();
-            if (!door.buttonsEnabled && closed == false)
+            var s = StartOfRound.Instance;
+            var noQuota = (TimeOfDay.Instance.quotaFulfilled - TimeOfDay.Instance.profitQuota) <= 0;
+            var aboutToFire = noQuota && (TimeOfDay.Instance.daysUntilDeadline <= 0 && s.shipIsLeaving || TimeOfDay.Instance.timeUntilDeadline <= 0);
+            if (!door.buttonsEnabled && closed == false && !aboutToFire)
             {
-                var s = StartOfRound.Instance;
-                int[] endGameStats = new int[4] { s.gameStats.daysSpent, s.gameStats.scrapValueCollected, s.gameStats.deaths, s.gameStats.allStepsTaken };
+                var daysSpent = s.gameStats.daysSpent;
+                var scrapValueCollected = s.gameStats.scrapValueCollected;
+                var deaths = s.gameStats.deaths;
+                var allStepsTaken = s.gameStats.allStepsTaken;
                 EjectPatcher.harmony.PatchAll(typeof(EjectPatcher));
                 if(!EndGame) FirstDayPatcher.harmony.PatchAll(typeof(FirstDayPatcher));
                 s.ManuallyEjectPlayersServerRpc();
+
+                if (!EndGame)
+                {
+                    s.gameStats.daysSpent = daysSpent;
+                    s.gameStats.scrapValueCollected = scrapValueCollected;
+                    s.gameStats.deaths = deaths;
+                    s.gameStats.allStepsTaken = allStepsTaken;
+                }
             }
             
             return true;
