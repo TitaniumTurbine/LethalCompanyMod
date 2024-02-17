@@ -96,71 +96,37 @@ namespace EnemySpawnerPlugin
             return enemies;
         }
 
-        
-
-        [HarmonyPatch(typeof(EnemyAI), "MeetsStandardPlayerCollisionConditions")]
+        [HarmonyPatch(typeof(EnemyAI), "PlayerIsTargetable")]
         [HarmonyPrefix]
-        static bool PatchMeetsStandardPlayerCollisionConditions(object[] __args, ref EnemyAI __instance, ref PlayerControllerB __result)
+        static bool PatchTargetable(object[] __args, ref bool __result, ref EnemyAI __instance)
         {
-            var other = (Collider)__args[0];
-            var inKillAnimation = (bool)__args[1];
-            var overrideIsInsideFactoryCheck = (bool)__args[2];
-            var r = false;
-            if (__instance.isEnemyDead)
+            var playerScript = (PlayerControllerB)__args[0];
+            var cannotBeInShip = (bool)__args[1];
+            //var overrideInsideFactoryCheck = (bool)__args[2];
+            var overrideInsideFactoryCheck = true;
+
+            if (cannotBeInShip && playerScript.isInHangarShipRoom)
             {
-                Debug.LogError("isEnemyDead");
-                __result = null;
-                return r;
+                __result = false;
+                return false;
             }
 
-            if (!__instance.ventAnimationFinished)
+            if (playerScript.isPlayerControlled && !playerScript.isPlayerDead && playerScript.inAnimationWithEnemy == null && (overrideInsideFactoryCheck || playerScript.isInsideFactory != __instance.isOutside) && playerScript.sinkingValue < 0.73f)
             {
-                Debug.LogError("!ventAnimationFinished");
-                __result = null;
-                return r;
+                if (__instance.isOutside && StartOfRound.Instance.hangarDoorsClosed)
+                {
+                    __result = playerScript.isInHangarShipRoom == __instance.isInsidePlayerShip;
+                    return false;
+                }
+
+                __result = true;
+                return false;
             }
 
-            if (inKillAnimation)
-            {
-                Debug.LogError("inKillAnimation");
-                __result = null;
-                return r;
-            }
-
-            if (__instance.stunNormalizedTimer >= 0f)
-            {
-                Debug.LogError("stunNormalizedTimer >= 0f");
-                __result = null;
-                return r;
-            }
-
-            PlayerControllerB component = other.gameObject.GetComponent<PlayerControllerB>();
-            if (component == null)
-            {
-                Debug.LogError("Null player component");
-                __result = null;
-                return r;
-            }
-            Debug.Log(component);
-            Debug.Log(GameNetworkManager.Instance.localPlayerController);
-            if(component != GameNetworkManager.Instance.localPlayerController)
-            {
-                Debug.LogError("Not local player");
-                __result = null;
-                return r;
-            }
-
-            if (!__instance.PlayerIsTargetable(component, cannotBeInShip: false, true))
-            {
-                Debug.LogError("player not targetable");
-                __result = null;
-                return r;
-            }
-
-            Debug.Log("Returning non-null component");
-            __result = component;
-            return r;
+            __result = false;
+            return false;
         }
+
 
         [HarmonyPatch(typeof(EnemyVent), "Start")]
         [HarmonyPostfix]
@@ -303,6 +269,70 @@ namespace EnemySpawnerPlugin
             Debug.Log("Allow death: " + __instance.AllowPlayerDeath());
             Debug.Log("Hit? " + !(!__instance.IsOwner || __instance.isPlayerDead || !__instance.AllowPlayerDeath()));
             return true;
+        }
+
+        [HarmonyPatch(typeof(EnemyAI), "MeetsStandardPlayerCollisionConditions")]
+        [HarmonyPrefix]
+        static bool PatchMeetsStandardPlayerCollisionConditions(object[] __args, ref EnemyAI __instance, ref PlayerControllerB __result)
+        {
+            var other = (Collider)__args[0];
+            var inKillAnimation = (bool)__args[1];
+            var overrideIsInsideFactoryCheck = (bool)__args[2];
+            var r = false;
+            if (__instance.isEnemyDead)
+            {
+                Debug.LogError("isEnemyDead");
+                __result = null;
+                return r;
+            }
+
+            if (!__instance.ventAnimationFinished)
+            {
+                Debug.LogError("!ventAnimationFinished");
+                __result = null;
+                return r;
+            }
+
+            if (inKillAnimation)
+            {
+                Debug.LogError("inKillAnimation");
+                __result = null;
+                return r;
+            }
+
+            if (__instance.stunNormalizedTimer >= 0f)
+            {
+                Debug.LogError("stunNormalizedTimer >= 0f");
+                __result = null;
+                return r;
+            }
+
+            PlayerControllerB component = other.gameObject.GetComponent<PlayerControllerB>();
+            if (component == null)
+            {
+                Debug.LogError("Null player component");
+                __result = null;
+                return r;
+            }
+            Debug.Log(component);
+            Debug.Log(GameNetworkManager.Instance.localPlayerController);
+            if(component != GameNetworkManager.Instance.localPlayerController)
+            {
+                Debug.LogError("Not local player");
+                __result = null;
+                return r;
+            }
+
+            if (!__instance.PlayerIsTargetable(component, cannotBeInShip: false, overrideIsInsideFactoryCheck))
+            {
+                Debug.LogError("player not targetable");
+                __result = null;
+                return r;
+            }
+
+            Debug.Log("Returning non-null component");
+            __result = component;
+            return r;
         }
         */
     #endregion
