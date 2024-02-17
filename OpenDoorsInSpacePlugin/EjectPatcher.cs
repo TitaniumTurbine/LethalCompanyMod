@@ -78,12 +78,6 @@ namespace OpenDoorsInSpacePlugin
                     Debug.Log("Calling reset ship!");
                     s.ResetShip();
                 }
-                else
-                {
-                    var resetFurniture = s.GetType().GetMethod("ResetShipFurniture", BindingFlags.NonPublic
-                | BindingFlags.Instance);
-                    resetFurniture.Invoke(s, new object[] {false, false});
-                }
             }
 
             if (endGame)
