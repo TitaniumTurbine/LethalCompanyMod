@@ -6,6 +6,8 @@ using Unity.Netcode;
 using UnityEngine.SceneManagement;
 using UnityEngine;
 using System.Collections.Generic;
+using GameNetcodeStuff;
+using System.Reflection;
 
 namespace EnemySpawnerPlugin
 {
@@ -94,14 +96,80 @@ namespace EnemySpawnerPlugin
             return enemies;
         }
 
+        
+
+        [HarmonyPatch(typeof(EnemyAI), "MeetsStandardPlayerCollisionConditions")]
+        [HarmonyPrefix]
+        static bool PatchMeetsStandardPlayerCollisionConditions(object[] __args, ref EnemyAI __instance, ref PlayerControllerB __result)
+        {
+            var other = (Collider)__args[0];
+            var inKillAnimation = (bool)__args[1];
+            var overrideIsInsideFactoryCheck = (bool)__args[2];
+            var r = false;
+            if (__instance.isEnemyDead)
+            {
+                Debug.LogError("isEnemyDead");
+                __result = null;
+                return r;
+            }
+
+            if (!__instance.ventAnimationFinished)
+            {
+                Debug.LogError("!ventAnimationFinished");
+                __result = null;
+                return r;
+            }
+
+            if (inKillAnimation)
+            {
+                Debug.LogError("inKillAnimation");
+                __result = null;
+                return r;
+            }
+
+            if (__instance.stunNormalizedTimer >= 0f)
+            {
+                Debug.LogError("stunNormalizedTimer >= 0f");
+                __result = null;
+                return r;
+            }
+
+            PlayerControllerB component = other.gameObject.GetComponent<PlayerControllerB>();
+            if (component == null)
+            {
+                Debug.LogError("Null player component");
+                __result = null;
+                return r;
+            }
+            Debug.Log(component);
+            Debug.Log(GameNetworkManager.Instance.localPlayerController);
+            if(component != GameNetworkManager.Instance.localPlayerController)
+            {
+                Debug.LogError("Not local player");
+                __result = null;
+                return r;
+            }
+
+            if (!__instance.PlayerIsTargetable(component, cannotBeInShip: false, true))
+            {
+                Debug.LogError("player not targetable");
+                __result = null;
+                return r;
+            }
+
+            Debug.Log("Returning non-null component");
+            __result = component;
+            return r;
+        }
+
         [HarmonyPatch(typeof(EnemyVent), "Start")]
         [HarmonyPostfix]
         static void SpawnInsideEnemies()
         {
             var random = new System.Random();
-            if (!insideSpawned && random.NextDouble() < insideSpawnChance)
+            var rm = RoundManager.Instance;
+            if (!insideSpawned && random.NextDouble() < insideSpawnChance && (rm.NetworkManager.IsServer || rm.NetworkManager.IsHost))
             {
-                var rm = RoundManager.Instance;
                 var spawns = GameObject.FindGameObjectsWithTag("EnemySpawn");
 
                 for (int i = 0; i < random.Next(insideMinCount, insideMaxCount); i++)
@@ -119,10 +187,9 @@ namespace EnemySpawnerPlugin
         static void SpawnOutsideEnemies()
         {
             var random = new System.Random();
-            if(random.NextDouble() < outsideSpawnChance)
+            var rm = RoundManager.Instance;
+            if (random.NextDouble() < outsideSpawnChance && (rm.NetworkManager.IsServer || rm.NetworkManager.IsHost))
             {
-                var rm = RoundManager.Instance;
-
                 foreach (var enemy in GetEnemies())
                 {
                     Debug.Log(enemy.enemyType.name);
@@ -137,17 +204,19 @@ namespace EnemySpawnerPlugin
 
         private static void SpawnEnemyFromVent(EnemyVent vent, RoundManager rm, string enemyName)
         {
+            Debug.Log("SpawnEnemyFromVent");
             Vector3 position = vent.floorNode.position;
             float y = vent.floorNode.eulerAngles.y;
 
             var enemyType = GetEnemies().Find(x => x.enemyType.name == enemyName).enemyType;
             enemyType.isOutsideEnemy = false;
 
-            rm.SpawnEnemyGameObject(position, y, vent.enemyTypeIndex, enemyType);
+            var enemy = rm.SpawnEnemyGameObject(position, y, vent.enemyTypeIndex, enemyType);
         }
 
         private static void SpawnEnemyOutside(RoundManager rm, string enemyName)
         {
+            Debug.Log("SpawnEnemyOutside");
             GameObject[] spawnPoints = GameObject.FindGameObjectsWithTag("OutsideAINode");
             Vector3 position = spawnPoints[rm.AnomalyRandom.Next(0, spawnPoints.Length)].transform.position;
             position = rm.GetRandomNavMeshPositionInRadius(position, 4f);
@@ -155,7 +224,86 @@ namespace EnemySpawnerPlugin
 
             var enemyType = GetEnemies().Find(x => x.enemyType.name == enemyName).enemyType;
             enemyType.isOutsideEnemy = true;
-            rm.SpawnEnemyGameObject(position, 0, 0, enemyType);
+
+            var enemy = rm.SpawnEnemyGameObject(position, 0, 0, enemyType);
         }
     }
+
+    #region debugging
+    /*
+        [HarmonyPatch(typeof(EnemyAI), "PlayerIsTargetable")]
+        [HarmonyPrefix]
+        static bool PatchTargetable(object[] __args, ref bool __result, ref EnemyAI __instance)
+        {
+            var playerScript = (PlayerControllerB)__args[0];
+            var cannotBeInShip = (bool)__args[1];
+            var overrideInsideFactoryCheck = (bool)__args[2];
+
+            if (cannotBeInShip && playerScript.isInHangarShipRoom)
+            {
+                Debug.LogError("cannotBeInShip && playerScript.isInHangarShipRoom");
+                __result = false;
+                return false;
+            }
+
+            Debug.Log("Player controlled: " + playerScript.isPlayerControlled);
+            Debug.Log("Player dead: " + playerScript.isPlayerDead);
+            Debug.Log("Player in animation with enemy is null: " + (playerScript.inAnimationWithEnemy == null));
+            Debug.Log("Override factory check: " + overrideInsideFactoryCheck);
+            Debug.Log("Player inside: " + playerScript.isInsideFactory);
+            Debug.Log("Enemy outside: " + __instance.isOutside);
+            Debug.Log("Player sinking value: " + playerScript.sinkingValue);
+
+            if (playerScript.isPlayerControlled && !playerScript.isPlayerDead && playerScript.inAnimationWithEnemy == null && (overrideInsideFactoryCheck || playerScript.isInsideFactory != __instance.isOutside) && playerScript.sinkingValue < 0.73f)
+            {
+                if (__instance.isOutside && StartOfRound.Instance.hangarDoorsClosed)
+                {
+                    Debug.LogError("isOutside && StartOfRound.Instance.hangarDoorsClosed");
+                    __result = playerScript.isInHangarShipRoom == __instance.isInsidePlayerShip;
+                    return false;
+                }
+
+                Debug.Log("Player targetable");
+                __result = true;
+                return false;
+            }
+
+            Debug.LogError("Failed all targeting conditions");
+            __result = false;
+            return false;
+        }
+
+        [HarmonyPatch(typeof(CrawlerAI), "OnCollideWithPlayer")]
+        [HarmonyPrefix]
+        static bool PatchCollide(Collider other, ref CrawlerAI __instance)
+        {
+            var t = __instance.GetType().GetField("timeSinceHittingPlayer", BindingFlags.NonPublic | BindingFlags.Instance);
+            if (!((float)t.GetValue(__instance) < 0.65f))
+            {
+                PlayerControllerB playerControllerB = __instance.MeetsStandardPlayerCollisionConditions(other);
+                Debug.Log("Crawler collide with player: " + playerControllerB);
+                if (playerControllerB != null)
+                {
+                    t.SetValue(__instance, 0f);
+                    playerControllerB.DamagePlayer(40, hasDamageSFX: true, callRPC: true, CauseOfDeath.Mauling);
+                    __instance.agent.speed = 0f;
+                    __instance.HitPlayerServerRpc((int)GameNetworkManager.Instance.localPlayerController.playerClientId);
+                    GameNetworkManager.Instance.localPlayerController.JumpToFearLevel(1f);
+                }
+            }
+            return false;
+        }
+
+        [HarmonyPatch(typeof(PlayerControllerB), "DamagePlayer")]
+        [HarmonyPrefix]
+        static bool PatchDamage(ref PlayerControllerB __instance)
+        {
+            Debug.Log("Owner: " + __instance.IsOwner);
+            Debug.Log("Dead: " + __instance.isPlayerDead);
+            Debug.Log("Allow death: " + __instance.AllowPlayerDeath());
+            Debug.Log("Hit? " + !(!__instance.IsOwner || __instance.isPlayerDead || !__instance.AllowPlayerDeath()));
+            return true;
+        }
+        */
+    #endregion
 }
