@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using HarmonyLib;
 using System.Linq;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace OpenDoorsInSpacePlugin
@@ -26,10 +27,11 @@ namespace OpenDoorsInSpacePlugin
         static bool SetDoorsClosed (bool closed)
         {
             var door = SceneManager.GetActiveScene().GetRootGameObjects().ToList().Find(x => x.name == "Environment").GetComponentInChildren<HangarShipDoor>();
+            var lever = SceneManager.GetActiveScene().GetRootGameObjects().ToList().Find(x => x.name == "Environment").GetComponentInChildren<StartMatchLever>();
             var s = StartOfRound.Instance;
             var noQuota = (TimeOfDay.Instance.quotaFulfilled - TimeOfDay.Instance.profitQuota) <= 0;
             var aboutToFire = noQuota && (TimeOfDay.Instance.daysUntilDeadline <= 0 && s.shipIsLeaving || TimeOfDay.Instance.timeUntilDeadline <= 0);
-            if (!door.buttonsEnabled && closed == false && !aboutToFire)
+            if (!door.buttonsEnabled && closed == false && !aboutToFire && !lever.leverHasBeenPulled)
             {
                 var daysSpent = s.gameStats.daysSpent;
                 var scrapValueCollected = s.gameStats.scrapValueCollected;
