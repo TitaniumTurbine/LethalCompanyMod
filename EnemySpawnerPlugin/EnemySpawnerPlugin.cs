@@ -2,12 +2,10 @@
 using DunGen;
 using HarmonyLib;
 using System.Linq;
-using Unity.Netcode;
 using UnityEngine.SceneManagement;
 using UnityEngine;
 using System.Collections.Generic;
 using GameNetcodeStuff;
-using System.Reflection;
 
 namespace EnemySpawnerPlugin
 {
@@ -23,6 +21,8 @@ namespace EnemySpawnerPlugin
         private static string[] insideNames;
         private static float insideSpawnChance;
         private static bool insideSpawned = false;
+        private static float playerCountScaling;
+        private static bool onlyScaleMax;
 
         private void Awake()
         {
@@ -67,12 +67,24 @@ namespace EnemySpawnerPlugin
                                         0.0f, // The default value
                                         "Chance of spawning enemies inside when you land"); // Description of the option to show in the config file
 
+            var configPlayerCountScaling = Config.Bind("General",      // The section under which the option is shown
+                                        "PlayerCountScaling",  // The key of the configuration option in the configuration file
+                                        0.0f, // The default value
+                                        "Multiplier for the min and max counts to scale with number of players. count = count * playerCountScaling * numberOfPlayers. Set to 0 to disable scaling with player count."); // Description of the option to show in the config file
+
+            var configOnlyScaleMax = Config.Bind("General",      // The section under which the option is shown
+                                        "OnlyScaleMax",  // The key of the configuration option in the configuration file
+                                        false, // The default value
+                                        "Only apply player count scaling to the max enemy counts"); // Description of the option to show in the config file
+
             outsideMinCount = configOutsideMinCount.Value;
             outsideMaxCount = configOutsideMaxCount.Value;
             outsideSpawnChance = configOutsideSpawnChance.Value;
             insideMinCount = configInsideMinCount.Value;
             insideMaxCount = configInsideMaxCount.Value;
             insideSpawnChance = configInsideSpawnChance.Value;
+            playerCountScaling = configPlayerCountScaling.Value;
+            onlyScaleMax = configOnlyScaleMax.Value;
 
             outsideNames = configOutsideNames.Value.Split(",");
             insideNames = configInsideNames.Value.Split(",");
@@ -134,11 +146,15 @@ namespace EnemySpawnerPlugin
         {
             var random = new System.Random();
             var rm = RoundManager.Instance;
+            var playerCount = GameNetworkManager.Instance.connectedPlayers;
+            var scaling = playerCountScaling > 0 ? playerCount * playerCountScaling : 1;
             if (!insideSpawned && random.NextDouble() < insideSpawnChance && (rm.NetworkManager.IsServer || rm.NetworkManager.IsHost))
             {
                 var spawns = GameObject.FindGameObjectsWithTag("EnemySpawn");
 
-                for (int i = 0; i < random.Next(insideMinCount, insideMaxCount); i++)
+                var min = onlyScaleMax ? insideMinCount : (int)(insideMinCount * scaling);
+                var max = (int)(insideMaxCount * scaling);
+                for (int i = 0; i < random.Next(min, max); i++)
                 {
                     SpawnEnemyFromVent(spawns[i % spawns.Length].GetComponent<EnemyVent>(), rm, insideNames[random.Next(insideNames.Length)]);
                 }
@@ -154,6 +170,8 @@ namespace EnemySpawnerPlugin
         {
             var random = new System.Random();
             var rm = RoundManager.Instance;
+            var playerCount = GameNetworkManager.Instance.connectedPlayers;
+            var scaling = playerCountScaling > 0 ? playerCount * playerCountScaling : 1;
             if (random.NextDouble() < outsideSpawnChance && (rm.NetworkManager.IsServer || rm.NetworkManager.IsHost))
             {
                 foreach (var enemy in GetEnemies())
@@ -161,7 +179,10 @@ namespace EnemySpawnerPlugin
                     Debug.Log(enemy.enemyType.name);
                 }
 
-                for (int i = 0; i < random.Next(outsideMinCount, outsideMaxCount); i++)
+                var min = onlyScaleMax ? outsideMinCount : (int)(outsideMinCount * scaling);
+                var max = (int)(outsideMaxCount * scaling);
+
+                for (int i = 0; i < random.Next(min, max); i++)
                 {
                     SpawnEnemyOutside(rm, outsideNames[random.Next(outsideNames.Length)]);
                 }
