@@ -14,11 +14,11 @@ namespace EnemySpawnerPlugin
     {
         private static int outsideMinCount;
         private static int outsideMaxCount;
-        private static string[] outsideNames;
+        private static List<string> outsideNames;
         private static float outsideSpawnChance;
         private static int insideMinCount;
         private static int insideMaxCount;
-        private static string[] insideNames;
+        private static List<string> insideNames;
         private static float insideSpawnChance;
         private static bool insideSpawned = false;
         private static float playerCountScaling;
@@ -38,8 +38,9 @@ namespace EnemySpawnerPlugin
 
             var configOutsideNames = Config.Bind("Outside Enemies",      // The section under which the option is shown
                                         "OutsideNames",  // The key of the configuration option in the configuration file
-                                        "Centipede,SandSpider,HoarderBug,Flowerman,Crawler,Blob,DressGirl,Puffer,Nutcracker,RedLocustBees,Doublewing,DocileLocustBees,MouthDog,ForestGiant,SandWorm,BaboonHawk,SpringMan,Jester,LassoMan,MaskedPlayerEnemy", // The default value
-                                        "The IDs of the enemy types to spawn outside, separated by commas"); // Description of the option to show in the config file
+                                        "", // The default value
+                                        "The IDs of the enemy types to spawn outside, separated by commas. Leave blank to select all enemies. All enemy IDs will be printed to the BepInEx console when loading a moon.\n" +
+                                        "Example: Flowerman,Crawler,MouthDog"); // Description of the option to show in the config file
 
             var configOutsideSpawnChance = Config.Bind("Outside Enemies",      // The section under which the option is shown
                                         "OutsideSpawnChance",  // The key of the configuration option in the configuration file
@@ -59,8 +60,10 @@ namespace EnemySpawnerPlugin
 
             var configInsideNames = Config.Bind("Inside Enemies",      // The section under which the option is shown
                                         "InsideNames",  // The key of the configuration option in the configuration file
-                                        "Centipede,SandSpider,HoarderBug,Flowerman,Crawler,Blob,DressGirl,Puffer,Nutcracker,RedLocustBees,Doublewing,DocileLocustBees,MouthDog,ForestGiant,SandWorm,BaboonHawk,SpringMan,Jester,LassoMan,MaskedPlayerEnemy", // The default value
-                                        "The IDs of the enemy types to spawn inside, separated by commas"); // Description of the option to show in the config file
+                                        "", // The default value
+                                        "The IDs of the enemy types to spawn outside, separated by commas. Leave blank to select all enemies. All enemy IDs will be printed to the BepInEx console when loading a moon.\n" +
+                                        "Example: Flowerman,Crawler,MouthDog"); // Description of the option to show in the config file
+
 
             var configInsideSpawnChance = Config.Bind("Inside Enemies",      // The section under which the option is shown
                                         "InsideSpawnChance",  // The key of the configuration option in the configuration file
@@ -70,7 +73,9 @@ namespace EnemySpawnerPlugin
             var configPlayerCountScaling = Config.Bind("General",      // The section under which the option is shown
                                         "PlayerCountScaling",  // The key of the configuration option in the configuration file
                                         0.0f, // The default value
-                                        "Multiplier for the min and max counts to scale with number of players. count = count * playerCountScaling * numberOfPlayers. Set to 0 to disable scaling with player count."); // Description of the option to show in the config file
+                                        "Multiplier for the min and max counts to scale with number of players.\n" +
+                                        "count = count * playerCountScaling * numberOfPlayers\n" +
+                                        "Set to 0 to disable scaling with player count."); // Description of the option to show in the config file
 
             var configOnlyScaleMax = Config.Bind("General",      // The section under which the option is shown
                                         "OnlyScaleMax",  // The key of the configuration option in the configuration file
@@ -86,25 +91,25 @@ namespace EnemySpawnerPlugin
             playerCountScaling = configPlayerCountScaling.Value;
             onlyScaleMax = configOnlyScaleMax.Value;
 
-            outsideNames = configOutsideNames.Value.Split(",");
-            insideNames = configInsideNames.Value.Split(",");
+            outsideNames = configOutsideNames.Value.Split(",").ToList();
+            insideNames = configInsideNames.Value.Split(",").ToList();
 
             Harmony.CreateAndPatchAll(typeof(EnemySpawnerPlugin));
         }
 
         private static List<SpawnableEnemyWithRarity> GetEnemies()
         {
-            var gameObjects = SceneManager.GetActiveScene().GetRootGameObjects();
-            List<SpawnableEnemyWithRarity> enemies = null;
-            foreach (var gameObject in gameObjects)
-            {
-                if (gameObject.name == "Environment")
-                {
-                    enemies = gameObject.GetComponentInChildren<Terminal>().moonsCatalogueList.SelectMany(x => x.Enemies.Concat(x.DaytimeEnemies).Concat(x.OutsideEnemies)).GroupBy(x => x.enemyType.name, (k, v) => v.First()).ToList();
-                }
-            }
+            Debug.Log("GETTING ENEMIES");
+            List<SpawnableEnemyWithRarity> enemies = new List<SpawnableEnemyWithRarity>();
+            enemies = GameObject.Find("Terminal")
+                .GetComponentInChildren<Terminal>()
+                .moonsCatalogueList
+                .SelectMany(x => x.Enemies.Concat(x.DaytimeEnemies).Concat(x.OutsideEnemies))
+                .Where(x => x != null && x.enemyType != null && x.enemyType.name != null)
+                .GroupBy(x => x.enemyType.name, (k, v) => v.First())
+                .ToList();
 
-            Debug.Log(enemies.Count);
+            Debug.Log($"Enemy types: {enemies.Count}");
             return enemies;
         }
 
@@ -151,12 +156,18 @@ namespace EnemySpawnerPlugin
             if (!insideSpawned && random.NextDouble() < insideSpawnChance && (rm.NetworkManager.IsServer || rm.NetworkManager.IsHost))
             {
                 var spawns = GameObject.FindGameObjectsWithTag("EnemySpawn");
+                var enemies = GetEnemies();
+                var enemyNames = enemies.Select(x => x.enemyType.name).ToList();
 
                 var min = onlyScaleMax ? insideMinCount : (int)(insideMinCount * scaling);
                 var max = (int)(insideMaxCount * scaling);
+                var validNames = insideNames.Intersect(enemyNames);
+                var names = validNames.Count() > 0 ? insideNames : enemyNames;
                 for (int i = 0; i < random.Next(min, max); i++)
                 {
-                    SpawnEnemyFromVent(spawns[i % spawns.Length].GetComponent<EnemyVent>(), rm, insideNames[random.Next(insideNames.Length)]);
+                    var name = names.ElementAt(random.Next(insideNames.Count()));
+                    Debug.Log($"Spawning a {name} inside");
+                    SpawnEnemyFromVent(spawns[i % spawns.Length].GetComponent<EnemyVent>(), rm, name);
                 }
 
                 insideSpawned = true;
@@ -164,7 +175,7 @@ namespace EnemySpawnerPlugin
             
         }
 
-        [HarmonyPatch(typeof(DungeonGenerator), "Generate")]
+        [HarmonyPatch(typeof(RoundManager), "SpawnScrapInLevel")]
         [HarmonyPostfix]
         static void SpawnOutsideEnemies()
         {
@@ -174,17 +185,23 @@ namespace EnemySpawnerPlugin
             var scaling = playerCountScaling > 0 ? playerCount * playerCountScaling : 1;
             if (random.NextDouble() < outsideSpawnChance && (rm.NetworkManager.IsServer || rm.NetworkManager.IsHost))
             {
-                foreach (var enemy in GetEnemies())
+                var enemies = GetEnemies();
+                var enemyNames = enemies.Select(x => x.enemyType.name).ToList();
+                foreach (var name in enemyNames)
                 {
-                    Debug.Log(enemy.enemyType.name);
+                    Debug.Log(name);
                 }
 
                 var min = onlyScaleMax ? outsideMinCount : (int)(outsideMinCount * scaling);
                 var max = (int)(outsideMaxCount * scaling);
+                var validNames = outsideNames.Intersect(enemyNames);
+                var names = validNames.Count() > 0 ? outsideNames : enemyNames;
 
                 for (int i = 0; i < random.Next(min, max); i++)
                 {
-                    SpawnEnemyOutside(rm, outsideNames[random.Next(outsideNames.Length)]);
+                    var name = names.ElementAt(random.Next(names.Count()));
+                    Debug.Log($"Spawning a {name} outside");
+                    SpawnEnemyOutside(rm, name);
                 }
             }
         }
