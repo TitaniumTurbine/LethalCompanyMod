@@ -7,9 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YouSmellPlugin", "YouSmellP
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EnemySpawnerPlugin", "EnemySpawnerPlugin\EnemySpawnerPlugin.csproj", "{AB30C7BA-2D71-480E-9520-8F92F55BF958}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AudioReplacerPlugin", "AudioReplacerPlugin\AudioReplacerPlugin.csproj", "{590BE42C-1A15-4CC3-B063-E0604B953F84}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenDoorsInSpacePlugin", "OpenDoorsInSpacePlugin\OpenDoorsInSpacePlugin.csproj", "{90449088-A55B-4967-975D-AB4537C9AB6C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenDoorsInSpacePlugin", "OpenDoorsInSpacePlugin\OpenDoorsInSpacePlugin.csproj", "{90449088-A55B-4967-975D-AB4537C9AB6C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,10 +23,6 @@ Global
 		{AB30C7BA-2D71-480E-9520-8F92F55BF958}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AB30C7BA-2D71-480E-9520-8F92F55BF958}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AB30C7BA-2D71-480E-9520-8F92F55BF958}.Release|Any CPU.Build.0 = Release|Any CPU
-		{590BE42C-1A15-4CC3-B063-E0604B953F84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{590BE42C-1A15-4CC3-B063-E0604B953F84}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{590BE42C-1A15-4CC3-B063-E0604B953F84}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{590BE42C-1A15-4CC3-B063-E0604B953F84}.Release|Any CPU.Build.0 = Release|Any CPU
 		{90449088-A55B-4967-975D-AB4537C9AB6C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{90449088-A55B-4967-975D-AB4537C9AB6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{90449088-A55B-4967-975D-AB4537C9AB6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
